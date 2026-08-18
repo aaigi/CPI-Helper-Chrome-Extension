@@ -14,6 +14,30 @@ In case of questions, please open an issue in github.
 3. register the file in manifest.json
 4. If you want to ship it with CPI-Helper, make a pull-request with detailed description.
 
+## Testing your plugin locally
+
+There is no build step. The repository folder itself is the loadable extension.
+
+1. If the CPI-Helper from the Chrome Web Store is installed, disable it first. Two copies both inject into the page and interfere with each other.
+2. Open `chrome://extensions` and switch on **Developer mode** (top right).
+3. Click **Load unpacked** and select the repository root folder (the one containing `manifest.json`).
+4. Open a CPI tenant. The content scripts are only injected on URLs matching `https://*.hana.ondemand.com/shell/*`, `.../itspaces/*` or the corresponding `*.platform.sapcloud.cn` hosts, see `content_scripts[0].matches` in `manifest.json`. The plain launchpad root does not match.
+5. Open an **iFlow in the editor**. The CPI-Helper button bar is only injected there, because `buildButtonBar()` needs the UI5 element `[id*='--iflowObjectPageHeader-actions']` to exist. A package list or the monitoring view does not get the bar.
+6. In that button bar (next to `Trace` and `Info`) open the **...** dropdown and choose **Plugins**. The list is alphabetical by plugin id. Find your plugin and switch **Activate** on. A plugin only runs when its `<pluginId>---isActive` setting is `true`.
+
+The extension icon in the Chrome toolbar opens a different UI (`popup/popup.html`, with Last Visited / Links / Settings / Info). It has no plugin management.
+
+Activation is stored in `chrome.storage.sync`, and the 3 second heartbeat is a top level `setInterval` in `scripts/contentScript.js`. So a `heartbeat` plugin keeps running on every matched CPI page once it has been activated; the iFlow editor is only needed to reach the switch.
+
+After every code change: press the reload button on the extension card in `chrome://extensions`, then do a full reload of the CPI tab. Content scripts are not hot-reloaded.
+
+If your plugin does not appear in the list:
+
+- the file is not registered in `manifest.json` under `content_scripts[0].js`, or it is registered before `plugins/run.js`, which declares `pluginList`
+- a syntax error in any content script aborts the whole injection chain. Check the **Errors** button on the extension card in `chrome://extensions` and the browser console.
+
+For runtime logging use the global `log` (`log.log`, `log.debug`) instead of `console`. Appending `?cpihelper_debug=true` to the CPI URL raises the log level.
+
 ## Details
 
 ### Dos and Dont's
